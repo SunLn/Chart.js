@@ -10,14 +10,43 @@ module.exports = function(Chart) {
 	Chart.layoutService = {
 		defaults: {},
 
-		// Register a box to a chartInstance. A box is simply a reference to an object that requires layout. eg. Scales, Legend, Plugins.
+		/**
+		 * Register a box to a chartInstance.
+		 * A box is simply a reference to an object that requires layout. eg. Scales, Legend, Title.
+		 * @method Chart.layoutService.addBox
+		 * @param {Core.Controller} chartInstance the chart to use
+		 * @param {Object} box the box to add
+		 * @param {Number} box.order the order of the boxes. Higher numbers are further away from the chart area
+		 * @param box.options Options for configuring the box
+		 * @param {String} box.options.position the position of the box. Can be 'left', 'top', 'right', 'bottom', or 'chartArea'
+		 * @param {Boolean} box.options.fullWidth if true, and the box is horizontal then push vertical boxes down
+		 * @param {Function} box.isHorizontal return true if this is a horizontal box (top or bottom position)
+		 * @param {Function} box.update Takes two parameters: width and height. Returns size of box
+		 * @param {Function} box.getPadding Returns an object with padding on the edges
+		 * @param {Number} box.width Width of box. Must be valid after update()
+		 * @param {Number} box.height Height of box. Must be valid after update()
+		 * @param {Number} box.left Left edge of the box. Set by layout system and cannot be used in update
+		 * @param {Number} box.top Top edge of the box. Set by layout system and cannot be used in update
+		 * @param {Number} box.right Right edge of the box. Set by layout system and cannot be used in update
+		 * @param {Number} box.bottom Bottom edge of the box. Set by layout system and cannot be used in update
+		 */
 		addBox: function(chartInstance, box) {
 			if (!chartInstance.boxes) {
 				chartInstance.boxes = [];
 			}
+
+			// Ensure that all boxes have an order
+			if (!box.order) {
+				box.order = 0;
+			}
 			chartInstance.boxes.push(box);
 		},
 
+		/**
+		 * Remove a box from a chart
+		 * @param {Core.Controller} chartInstance the chart to remove the box from
+		 * @param {Object} box the box to remove
+		 */
 		removeBox: function(chartInstance, box) {
 			if (!chartInstance.boxes) {
 				return;
@@ -25,9 +54,14 @@ module.exports = function(Chart) {
 			chartInstance.boxes.splice(chartInstance.boxes.indexOf(box), 1);
 		},
 
-		// The most important function
+		/**
+		 * Fits boxes of the given chart into the given size by having each box measure itself
+		 * then running a fitting algorithm
+		 * @param {Core.Controller} chartInstance the chart
+		 * @param {Number} width the width to fit into
+		 * @param {Number} height the height to fit into
+		 */
 		update: function(chartInstance, width, height) {
-
 			if (!chartInstance) {
 				return;
 			}
@@ -77,6 +111,14 @@ module.exports = function(Chart) {
 			});
 			bottomBoxes.sort(function(a, b) {
 				return (a.options.fullWidth ? 1 : 0) - (b.options.fullWidth ? 1 : 0);
+			});
+
+			// Ensure that boxes are sorted by order. Higher order means further away from the chart
+			leftBoxes.sort(function(a, b) {
+				return b.order - a.order;
+			});
+			rightBoxes.sort(function(a, b) {
+				return a.order - b.order;
 			});
 
 			// Essentially we now have any number of boxes on each of the 4 sides.
