@@ -2617,6 +2617,7 @@
 					datasetObject.points.push(new this.PointClass({
 						value : dataPoint,
 						label : data.labels[index],
+						dashLine: data.dashLines[index],
 						datasetLabel: dataset.label,
 						strokeColor : dataset.pointStrokeColor,
 						fillColor : dataset.pointColor,
@@ -2780,7 +2781,6 @@
 
 			this.scale.draw(easingDecimal);
 
-
 			helpers.each(this.datasets,function(dataset){
 				var pointsWithValues = helpers.where(dataset.points, hasValue);
 
@@ -2833,15 +2833,36 @@
 				//Draw the line between all the points
 				ctx.lineWidth = this.options.datasetStrokeWidth;
 				ctx.strokeStyle = dataset.strokeColor;
-				ctx.beginPath();
-
+				var drawText = true
+                ctx.beginPath();
 				helpers.each(pointsWithValues, function(point, index){
 					if (index === 0){
+						if(point.dashLine) {
+                            ctx.setLineDash([18, 3]);
+                            drawText = false;
+						} else {
+                            ctx.setLineDash([18, 0]);
+						}
+
 						ctx.moveTo(point.x, point.y);
 					}
 					else{
 						if(this.options.bezierCurve){
-							var previous = previousPoint(point, pointsWithValues, index);
+                            var next = nextPoint(point, pointsWithValues, index);
+                            var previous = previousPoint(point, pointsWithValues, index);
+                            if(next.dashLine) {
+								if(drawText) {
+									ctx.fillText(point.value, point.x - 10 , point.y);
+                                    drawText = false;
+								}
+								if(index === pointsWithValues.length-1) {
+                                    ctx.fillText(point.value, point.x - 10, point.y);
+								}
+							}
+                            if(point.dashLine) {
+                                ctx.stroke();
+                                ctx.setLineDash([3, 3]);
+                            }
 
 							ctx.bezierCurveTo(
 								previous.controlPoints.outer.x,
@@ -2858,7 +2879,7 @@
 					}
 				}, this);
 
-				ctx.stroke();
+                ctx.stroke();
 
 				if (this.options.datasetFill && pointsWithValues.length > 0){
 					//Round off the line by going to the base of the chart, back to the start, then fill.
